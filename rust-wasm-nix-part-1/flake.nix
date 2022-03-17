@@ -23,6 +23,13 @@
         pkgs = import inputs.nixpkgs { inherit system overlays; };
 
         rustWithWasmTarget = pkgs.rust-bin.fromRustupToolchainFile ./rust-toolchain.toml;
+
+        rustPackages = [
+          rustWithWasmTarget
+          pkgs.binaryen
+          pkgs.wasm-bindgen-cli
+        ];
+
       in
       {
         # expose cargo so that we can run the cargo commands from our shell
@@ -31,11 +38,42 @@
           program = "${pkgs.cargo}/bin/cargo";
         };
 
+        defaultPackage = pkgs.rustPlatform.buildRustPackage {
+          pname = "rust-wasm-hello-world";
+          version = "0.1.1";
+
+          src = ./.;
+
+          cargoLock = {
+            lockFile = ././Cargo.lock;
+          };
+
+          nativeBuildInputs = rustPackages;
+
+          buildPhase = ''
+            cargo build --target=wasm32-unknown-unknown --release &&              \
+            wasm-bindgen                                                          \
+              --target web                                                        \
+              --out-dir dist                                                      \
+              target/wasm32-unknown-unknown/release/rust_wasm_hello_world.wasm
+
+          '';
+
+          installPhase = ''
+            mkdir -p $out/js                               && \
+            cp dist/rust_wasm_hello_world.js $out/js/      && \
+            cp dist/rust_wasm_hello_world_bg.wasm $out/js  && \
+
+            cp index.html $out/
+          '';
+
+          doCheck = false;
+
+        };
+
         devShell = pkgs.mkShell {
-          packages = [
-            rustWithWasmTarget
-            pkgs.binaryen
-            pkgs.wasm-bindgen-cli
+          packages = rustPackages ++ [
+            pkgs.rust-analyzer
           ];
         };
       }
