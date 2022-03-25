@@ -55,14 +55,13 @@
             wasm-bindgen                                                          \
               --target web                                                        \
               --out-dir dist                                                      \
+              --no-typescript                                                     \
               target/wasm32-unknown-unknown/release/rust_wasm_hello_world.wasm
-
           '';
 
           installPhase = ''
-            mkdir -p $out/js                               && \
-            cp dist/rust_wasm_hello_world.js $out/js/      && \
-            cp dist/rust_wasm_hello_world_bg.wasm $out/js  && \
+            mkdir -p $out/js   && \
+            cp dist/* $out/js/ && \
 
             cp index.html $out/
           '';
